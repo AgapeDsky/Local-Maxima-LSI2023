@@ -1,4 +1,4 @@
-module local_maxima_cpu_v2 (clk, rst, en, in, out, finish);
+module local_maxima_cpu (clk, rst, en, in, out, finish);
 
     // PORTS
     input clk, rst, en;
@@ -66,32 +66,36 @@ module local_maxima_cpu_v2 (clk, rst, en, in, out, finish);
     );
 
     // REGISTER BANKS
-    wire [7:0] bank_address;
+    wire [7:0] input_bank_address;
+    wire [7:0] output_bank_address;
+
     wire bank_en_write;
     wire output_bank_data; wire [7:0] input_bank_data;
-    regfile_8b input_bank(clk, bank_address, bank_en_write, input_bank_data);
-    regfile_1b output_bank(clk, bank_address, bank_en_write, output_bank_data);
+    regfile_8b input_bank(clk, input_bank_address, bank_en_write, input_bank_data);
+    regfile_1b output_bank(clk, output_bank_address, bank_en_write, output_bank_data);
 
-    assign bank_address = count;
+    // assign bank_address = (count == 42) ? 1 : count;
+    assign input_bank_address = (iteration == 1) ? count : count + 2;
+    assign output_bank_address = (iteration == 1) ? count : count + 7+2;
     assign bank_en_write = (iteration == 1);
 
-    assign input_bank_data = bank_en_write ? d1_0_8b_in : 8'bZ;
-    assign output_bank_data = bank_en_write ? d1_0_1b_in : 1'bZ;
+    assign input_bank_data = (bank_en_write) ? d1_0_8b_in : 8'bZ;
+    assign output_bank_data = bank_en_write ? out_cmp : 1'bZ;
 
     always @(posedge clk) begin
         if (!rst) begin
             col <= 0;
             row <= 1;
-            count <= 0;
+            count <= 0+2;
             iteration <= 1;
         end
         else begin
-            d1_0_8b_in <= in;
-            d1_0_1b_in <= 1;
-            col <= (count <= 7) ? 1 : (col == 6) ? 1 : (count > 36) ? col : col+1;
-            row <= (count <= 7) ? 1 : (col != 6) ? row : (row == 6) ? 1 : (count > 36) ? row : row+1;
-            count <= (count == 42) ? 0 : count+1;
-            iteration <= (count == 42) ? iteration+1 : iteration;
+            d1_0_8b_in <= (count >= 36+2) ? 0 : bank_en_write ? in : input_bank_data;
+            d1_0_1b_in <= bank_en_write ? 1  : output_bank_data;
+            col <= (count <= 7+2) ? 1 : (col == 6) ? 1 : (count > 36+2) ? col : col+1;
+            row <= (count <= 7+2) ? 1 : (col != 6) ? row : (row == 6) ? 1 : (count > 36+2) ? row : row+1;
+            count <= (count == 42+2) ? 1 : count+1;
+            iteration <= (count == 42+2) ? iteration+1 : iteration;
         end
     end
 
