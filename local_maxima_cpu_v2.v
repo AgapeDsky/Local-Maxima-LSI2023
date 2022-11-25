@@ -1,4 +1,4 @@
-module local_maxima_cpu (clk, rst, en, in, out, finish);
+module local_maxima_cpu_v2 (clk, rst, en, in, out, finish);
 
     // PORTS
     input clk, rst, en;
@@ -70,9 +70,10 @@ module local_maxima_cpu (clk, rst, en, in, out, finish);
     wire [7:0] output_bank_address;
 
     wire bank_en_write;
-    wire output_bank_data; wire [7:0] input_bank_data;
+    wire output_bank_data, output_bank_data_cp; wire [7:0] input_bank_data;
     regfile_8b input_bank(clk, input_bank_address, bank_en_write, input_bank_data);
     regfile_1b output_bank(clk, output_bank_address, bank_en_write, output_bank_data);
+    // regfile_1b output_bank_cp(clk, output_bank_address, !bank_en_write, output_bank_data_cp);
 
     // assign bank_address = (count == 42) ? 1 : count;
     assign input_bank_address = (iteration == 1) ? count : count + 2;
@@ -81,6 +82,7 @@ module local_maxima_cpu (clk, rst, en, in, out, finish);
 
     assign input_bank_data = (bank_en_write) ? d1_0_8b_in : 8'bZ;
     assign output_bank_data = bank_en_write ? out_cmp : 1'bZ;
+    assign output_bank_data_cp = !bank_en_write ? out_cmp : 1'bZ;
 
     always @(posedge clk) begin
         if (!rst) begin
@@ -92,10 +94,10 @@ module local_maxima_cpu (clk, rst, en, in, out, finish);
         else begin
             d1_0_8b_in <= (count >= 36+2) ? 0 : bank_en_write ? in : input_bank_data;
             d1_0_1b_in <= bank_en_write ? 1  : output_bank_data;
-            col <= (count <= 7+2) ? 1 : (col == 6) ? 1 : (count > 36+2) ? col : col+1;
-            row <= (count <= 7+2) ? 1 : (col != 6) ? row : (row == 6) ? 1 : (count > 36+2) ? row : row+1;
-            count <= (count == 42+2) ? 1 : count+1;
-            iteration <= (count == 42+2) ? iteration+1 : iteration;
+            col <= (count <= 7+2) ? 1 : (col == 6) ? 1 : col+1;
+            row <= (count <= 7+2) ? 1 : (col != 6) ? row : (row == 6) ? 1 : row+1;
+            count <= (count == 42+2+1) ? 1 : count+1;
+            iteration <= (count == 42+2+1) ? iteration+1 : iteration;
         end
     end
 
